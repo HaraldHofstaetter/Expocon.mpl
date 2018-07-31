@@ -9,7 +9,7 @@ export Generator, Word, grade, hom, wcoeff,
 global `type/Generator`, `type/Word`, `print/Word`, `print/hom`;
 
 local grade_gen, grade_word, lyndon_transform, genLW,
-      lyndon_bracket, genLB,
+      lyndon_bracket, genLB, convert_commutator,
       lexless, sort_lexorder, invperm, reverse, analyze_lyndon_word;
 
 `type/Generator` := proc (g) 
@@ -114,15 +114,36 @@ genLW := proc(k::integer, n::integer, t::integer, p::integer, trafo::boolean)
     end if
 end proc;
 
-lyndon_words := proc(k::integer, n::integer)
-    local trafo;
+lyndon_words := proc(s::{integer, list(Generator), symbol}, q::{integer, list(integer)})
+    local trafo, qq, n, k, w, x;
     global __a, __W;
 
-    __a := [0$n+1];
-    __W := [];
+    if type(s, list(Generator)) then
+        k := nops(s)
+    elif type(s, symbol) then
+        k := 1
+    else
+        k := s
+    end if;
+
+    if type(q, integer) then
+        qq := [q]
+    else
+        qq := q
+    end;
+
     trafo := k<2;
-    genLW( `if`(trafo, 2, k), n, 1, 1, trafo);
-    __W
+    __W := [];
+    for n in qq do
+        __a := [0$n+1];
+        genLW( `if`(trafo, 2, k), n, 1, 1, trafo)
+    end do;
+
+    if type(s, integer) then
+       return __W
+    else
+        return [seq([seq(s[x+1], x=w)], w=__W)]
+    end if
 end proc;
 
 
@@ -176,17 +197,48 @@ genLB := proc (k::integer, n::integer, t::integer, trafo::boolean)
     end if
 end proc;
 
-lyndon_basis := proc(k::integer, n::integer)
-    local trafo;
+convert_commutator := proc(s::{list(Generator), symbol}, c)
+    if type(c,integer) then
+        return s[c+1]
+    else
+        return Physics[Commutator](convert_commutator(s, op(1, c)), 
+                                   convert_commutator(s, op(2, c)))
+    end if
+end proc;
+
+lyndon_basis := proc(s::{integer, list(Generator), symbol}, q::{integer, list(integer)})
+    local trafo, qq, n, k, b;
     global __a, __p, __split, __B;
 
-    __a := [0$n+1];
-    __p := [1$n];
-    __split := array(1 .. n, 1 .. n, [[0$n]$n]);
+    if type(s, list(Generator)) then
+        k := nops(s)
+    elif type(s, symbol) then
+        k := 1
+    else
+        k := s
+    end if;
+
+    if type(q, integer) then
+        qq := [q]
+    else
+        qq := q
+    end;
+
     __B := [];
     trafo := k<2;
-    genLB( `if`(trafo, 2, k), n, 1, trafo);
-    __B
+
+    for n in qq do
+        __a := [0$n+1];
+        __p := [1$n];
+        __split := array(1 .. n, 1 .. n, [[0$n]$n]);
+        genLB( `if`(trafo, 2, k), n, 1, trafo)
+    end do;
+
+    if type(s, integer) then
+       return __B
+    else
+        return [seq(convert_commutator(s, b), b=__B)]
+    end if
 end proc;
 
 
