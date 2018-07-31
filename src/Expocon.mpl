@@ -143,7 +143,7 @@ lyndon_words := proc(s::{integer, list(Generator), symbol}, q::{integer, list(in
     if type(s, integer) then
        return __W
     else
-        return [seq([seq(s[x+1], x=w)], w=__W)]
+        return [seq(Word(seq(s[x+1], x=w)), w=__W)]
     end if
 end proc;
 
