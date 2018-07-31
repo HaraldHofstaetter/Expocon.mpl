@@ -1,15 +1,18 @@
 Expocon := module()
 
 option package;
+
 export Generator, Word, grade, hom, wcoeff, 
-       lyndon_words, lyndon_basis,
+       lyndon_words, lyndon_basis, lyndon2rightnormed,
        rhs_legendre;
+
 global `type/Generator`, `type/Word`, `print/Word`, `print/hom`;
+
 local grade_gen, grade_word, lyndon_transform, genLW,
-      lyndon_bracket, genLB;
+      lyndon_bracket, genLB,
+      lexless, sort_lexorder, invperm, reverse, analyze_lyndon_word;
 
 `type/Generator` := proc (g) 
-    #type(g, name) and grade(g) <> undefined     
     type(g, name) and type(g, noncommutative)
 end proc;
 
@@ -67,6 +70,7 @@ wcoeff := proc (w::Word, ex::anything)
     H := Matrix(hom(w, ex)); 
     H[1, LinearAlgebra[Dimension](H)[2]] 
 end proc;
+
 
 ########################################
 #Algorithm 2.1 from
@@ -185,6 +189,134 @@ lyndon_basis := proc(k::integer, n::integer)
     __B
 end proc;
 
+
+########################################
+#Implemented by H. Hofstätter after the method described in
+#  E.S. Chibrikov, A right normed basis for free Lie algebras
+#  and Lyndon-Shirshov words, Journal of Algebra 302 (2006) 593–612
+
+lexless := proc (a::(list(integer)), b::(list(integer))) 
+    if a=b then
+        return false
+    else
+        return lexorder(convert([seq(x+1,x=a)], bytes), convert([seq(x+1,x=b)], bytes)) 
+    end if
+end proc;
+
+sort_lexorder := proc (W::(list(list(integer)))) 
+    # see https://www.mapleprimes.com/posts/40639-Ordering-A-List-Of-Lists#comment75122
+    local Ws; 
+    Ws := [seq(convert([seq(x+1, x = w)], bytes), w = W)];
+    Ws := sort(Ws, lexorder); 
+    [seq([seq(x-1, x = convert(w, bytes))], w = Ws)]
+end proc;
+
+invperm := proc(a::list(integer))
+    local j;
+    b := [0$nops(a)];
+    for j from 1 to nops(a) do
+        b[a[j]] := j
+    end do;
+    b
+end proc;
+
+reverse := proc(a::list(integer))
+    local j;
+    [seq(a[i], i=nops(a)..1,-1)]
+end proc;
+
+analyze_lyndon_word := proc(w::list(integer))
+    q := max(w);
+    A := table([seq([i]=i, i=1..q)]); 
+    w1 := [];
+    
+    lw := nops(w);
+    s := 1;
+    m1 := 1;
+    m2 := 0;
+    
+    # get a
+    a := min(w);
+    
+    #get av
+    s := s+1;
+    while s<=lw and w[s]<>a do
+        s := s+1
+    end do;
+    v := w[2..s-1];
+    av := [a,op(v)];
+    lav := nops(av);  
+    while s<=lw do
+        if m2<>0 then # do not change m2 in 1st iteration
+            m1 := s
+        end if;
+        # get n
+        n := 0;
+        while s+lav<=lw and w[s+lav]=a and w[s..s+lav-1]=av do 
+            s := s+lav;
+            n := n+ 1
+        end do;
+        s := s+1;
+    
+        #get uu
+        if member(a, w[s..-1], 'k') then
+            k := k+s-1;
+            uu := w[s..k-1];
+            s := k
+        else
+            uu := w[s..-1];
+            s := lw+1
+        end if;
+        #do something with uu 
+        j := 1;
+        while not (lexless(v,uu[1..j]) and not lexless(v,uu[1..j-1])) do
+            j := j+1
+        end do;
+        u := uu[1..j];
+        u1 := uu[j+1..-1];
+        m2 := s-nops(u1)-1;
+        if assigned(A[w[m1..m2]]) then
+            x := A[w[m1..m2]]
+        else
+            q := q+1;
+            A[w[m1..m2]] := q;
+            x := q
+        end if;
+        w1 := [op(w1), x, op(u1)]
+    end do;  
+    pp := invperm([seq(A[x], x=sort_lexorder([indices(A, `nolist`)]))]);
+    w2 := [seq(pp[x], x=w1)];
+    tt := [[]$q];
+    for xy in indices(A, 'pairs') do
+        tt[pp[op(2,xy)]] := op(1,xy);
+    end do;    
+    w2, tt
+end proc;
+
+lyndon2rightnormed := proc(w::list(integer))
+    aa := min(w);
+    k := 0; # number of occurences of a in w
+    for x in w do
+        if x=aa then
+            k := k+1
+        end if
+    end do;
+    if k=1 then
+        return reverse(w)
+    end if;
+    w_1, tt := analyze_lyndon_word(w);
+    u_1 := lyndon2rightnormed(w_1);
+    y := tt[u_1[-1]];
+    a := y[1]; 
+    member(a, y[2..-1], 'k0'); 
+    k0 := k0+1;
+    member(a, reverse(y), 'k1'); 
+    k1 := nops(y)-k1+1;
+    v := y[2..k0-1];
+    avn := y[k0..k1-1];
+    u1 := y[k1+1..-1];
+    [op(map(op,tt[u_1[1..-2]])), op(avn), a, op(u1), op(reverse(v)), a]
+end proc;
 
 
 ########################################
