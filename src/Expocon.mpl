@@ -155,10 +155,14 @@ end proc;
 
 lyndon_bracket := proc(l::integer, r::integer, trafo::boolean)
     global __a, __split:
-    if trafo and __a[l+1]=0 and __a[l+2..r+1]=[1$r-l] then
+    if l=r then
+        if trafo and __a[l+1]<>0 then
+            return NULL
+        else
+            return __a[l+1]
+        end if
+    elif trafo and __a[l+1]=0 and __a[l+2..r+1]=[1$r-l] then
         return r-l
-    elif not trafo and l=r then
-        return __a[l+1]
     else        
         return [lyndon_bracket(l,__split[l,r]-1, trafo),
             lyndon_bracket(__split[l,r], r, trafo)]
