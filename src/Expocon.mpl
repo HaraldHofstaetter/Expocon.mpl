@@ -3,14 +3,15 @@ Expocon := module()
 option package;
 
 export Generator, Word, grade, hom, wcoeff, 
-       lyndon_words, lyndon_basis, lyndon2rightnormed,
+       lyndon_words, lyndon_basis, rightnormed_basis,
        rhs_legendre;
 
 global `type/Generator`, `type/Word`, `print/Word`, `print/hom`;
 
 local grade_gen, grade_word, lyndon_transform, genLW,
       lyndon_bracket, genLB, convert_commutator,
-      lexless, sort_lexorder, invperm, reverse, analyze_lyndon_word;
+      lexless, sort_lexorder, invperm, reverse, analyze_lyndon_word,
+      lyndon2rightnormed, rightnormed_word2commutator;
 
 `type/Generator` := proc (g) 
     type(g, name) and type(g, noncommutative)
@@ -373,6 +374,39 @@ lyndon2rightnormed := proc(w::list(integer))
     u1 := y[k1+1..-1];
     [op(map(op,tt[u_1[1..-2]])), op(avn), a, op(u1), op(reverse(v)), a]
 end proc;
+
+rightnormed_word2commutator := proc(w::list(integer))
+    local j;
+    b := w[-1];
+    for j from nops(w)-1 to 1 by -1 do
+        b := [w[j], b];
+    end do;
+    b
+end proc;
+
+rightnormed_basis := proc(s::{integer, list(Generator), symbol}, q::{integer, list(integer)})
+    local k, B, w;
+
+    if type(s, list(Generator)) then
+        k := nops(s)
+    elif type(s, symbol) then
+        k := 1
+    else
+        k := s
+    end if;
+
+    B := [seq(rightnormed_word2commutator(
+              lyndon2rightnormed(w)), w=lyndon_words(k, q))];
+
+    if type(s, integer) then
+       return B
+    else
+       return [seq(convert_commutator(s, b), b=B)]
+    end if
+end proc;
+
+
+  
 
 
 ########################################
