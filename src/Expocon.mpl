@@ -1,11 +1,12 @@
 Expocon := module()
 
 option package;
-export Generator, Word, grade, hom, wcoeff, lyndon_words,
+export Generator, Word, grade, hom, wcoeff, 
+       lyndon_words, lyndon_basis,
        rhs_legendre;
 global `type/Generator`, `type/Word`, `print/Word`, `print/hom`;
-local grade_gen, grade_word, lyndon_words_int, lyndon_words_list,
-      lyndon_words_non_auto, lyndon_transform;
+local grade_gen, grade_word, lyndon_transform, genLW,
+      lyndon_bracket, genLB;
 
 `type/Generator` := proc (g) 
     #type(g, name) and grade(g) <> undefined     
@@ -67,68 +68,126 @@ wcoeff := proc (w::Word, ex::anything)
     H[1, LinearAlgebra[Dimension](H)[2]] 
 end proc;
 
-lyndon_words_int := proc (s::integer, n::integer, { [o1, all_lower_terms]::boolean := true, [o2, odd_terms_only]::boolean := false }) 
-    local w, k, m, W; 
-    option overload; 
-    w := [1, seq(0, k = 1 .. n-1)]; 
-    k := 1; 
-    W := []; 
-    if (o1 or k = n) and (not o2 or type(k, odd)) then 
-        W := [op(W), w[1 .. k]] 
-    end if; 
-    while 1 < k or w[1] < s do 
-        m := k; 
-        while k < n do 
-            w[k+1] := w[k-m+1]; 
-            k := k+1 
-        end do; 
-        while 0 < k and w[k] = s do 
-            k := k-1 
-        end do; 
-        w[k] := w[k]+1; 
-        if (o1 or k = n) and (not o2 or type(k, odd)) then 
-            W := [op(W), w[1 .. k]] 
-        end if 
-    end do; 
-    return sort(W, proc (x, y) options operator, arrow; nops(x) <= nops(y) end proc) 
-end proc;
-
-lyndon_words_list := proc (S::list(Generator), n::integer, { all_lower_terms::boolean := true, odd_terms_only::boolean := false }) 
-    local W; 
-    option overload; 
-    W := lyndon_words_int(nops(S), n, o1 = all_lower_terms, o2 = odd_terms_only); 
-    [seq(Word(seq(op(W[i, j], S), j = 1 .. nops(W[i]))), i = 1 .. nops(W))] 
-end proc;
+########################################
+#Algorithm 2.1 from
+#  K. Cattell, F. Ruskey, J. Sawada, M. Serra, C.R. Miers, Fast algorithms to generate necklaces, 
+#  unlabeled necklaces and irreducible polynomials over GF(2), J. Algorithms 37 (2) (2000) 267–282
 
 lyndon_transform := proc (w::(list(integer))) 
     local w1, c, x; 
     w1 := []; 
-    c := 1; 
+    c := 0; 
     for x in w[2 .. -1] do 
-        if x = 2 then 
+        if x = 1 then 
             c := c+1 
         else 
             w1 := [op(w1), c]; 
-            c := 1 
+            c := 0 
         end if 
     end do; 
     w1 := [op(w1), c]; 
     w1 
 end proc;
 
-lyndon_words_non_auto := proc (A::symbol, n::integer, { all_lower_terms::boolean := true, odd_terms_only::boolean := false, max_generator_grade::integer:=n }) 
-    local W; 
-    option overload; 
-    W := map(lyndon_transform,
-             lyndon_words_int(2, n, o1 = all_lower_terms, o2 = odd_terms_only)[2..-1]); 
-    if max_generator_grade<n then
-         W := remove(w->max(w)>max_generator_grade, W)
-    end if;
-    [seq(Word(seq(A[x], x in w)), w in W)]
+genLW := proc(k::integer, n::integer, t::integer, p::integer, trafo::boolean)
+    global __a, __W;
+    local j;
+    if t>n then
+        if p=n then
+            if trafo then
+                __W := [op(__W), lyndon_transform(__a[2..n+1])]
+            else
+                __W := [op(__W), __a[2..n+1]]
+            end if
+        end if
+    else
+        __a[t+1] := __a[t-p+1];
+        genLW(k, n, t+1, p,  trafo);
+        for j from __a[t-p+1]+1 to k-1 do
+            __a[t+1] := j;
+            genLW(k, n, t+1, t,  trafo)
+        end do
+    end if
 end proc;
 
-lyndon_words := overload([lyndon_words_int, lyndon_words_list, lyndon_words_non_auto]);
+lyndon_words := proc(k::integer, n::integer)
+    local trafo;
+    global __a, __W;
 
+    __a := [0$n+1];
+    __W := [];
+    trafo := k<2;
+    genLW( `if`(trafo, 2, k), n, 1, 1, trafo);
+    __W
+end proc;
+
+
+########################################
+#Algorithm from
+#  J. Sawada, F. Ruskey, Generating Lyndon brackets. An addendum to: Fast algorithms 
+#  to generate necklaces, unlabeled necklaces and irreducible polynomials over GF(2),
+#  J. Algorithms 46 (2003) 21–26
+
+lyndon_bracket := proc(l::integer, r::integer, trafo::boolean)
+    global __a, __split:
+    if trafo and __a[l+1]=0 and __a[l+2..r+1]=[1$r-l] then
+        return r-l
+    elif not trafo and l=r then
+        return __a[l+1]
+    else        
+        return [lyndon_bracket(l,__split[l,r]-1, trafo),
+            lyndon_bracket(__split[l,r], r, trafo)]
+    end if
+end proc;
+
+genLB := proc (k::integer, n::integer, t::integer, trafo::boolean)
+    global __p, __a, __split, __B;
+    local q, i, j;
+    if t>n then
+        if n=__p[1] then
+            __B := [op(__B), lyndon_bracket(1, n, trafo)]
+        end if
+    else
+        q := __p;
+        for j from __a[t-__p[1]+1] to k-1 do
+            __a[t+1] := j;
+            for i from 1 to t-1 do
+                if __a[t+1]<__a[t-__p[i]+1] then
+                    __p[i] := 0
+                end if;
+                if __a[t+1]>__a[t-__p[i]+1] then
+                    __p[i] := t-i+1
+                end if
+            end do;
+            for i from t-1 to 1 by -1 do
+                if __p[i+1]=t-i then
+                    __split[i,t] := i+1
+                else
+                    __split[i,t] := __split[i+1,t]
+                end if
+            end do;
+            genLB(k, n, t+1, trafo);
+            __p := q
+        end do
+    end if
+end proc;
+
+lyndon_basis := proc(k::integer, n::integer)
+    local trafo;
+    global __a, __p, __split, __B;
+
+    __a := [0$n+1];
+    __p := [1$n];
+    __split := array(1 .. n, 1 .. n, [[0$n]$n]);
+    __B := [];
+    trafo := k<2;
+    genLB( `if`(trafo, 2, k), n, 1, trafo);
+    __B
+end proc;
+
+
+
+########################################
 rhs_legendre := proc(W::list(Word))
     local W1, p, w, L, l, s, c, k, T, v;
     W1 := [seq(map(grade, [op(w)]), w in W)];
