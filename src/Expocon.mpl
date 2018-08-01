@@ -74,7 +74,7 @@ end proc;
 end proc;
 
 homv := proc (w, ex, v) # no type checks here due to performance reasons
-    local i, v1, zero;
+    local i, v1, v2, f, zero;
     if type(ex,name) and type(ex, noncommutative) then 
         return [seq(`if`(op(i, w)=ex, v[i+1], 0), i=1..nops(w)), 0]
     elif type(ex, `+`) then 
