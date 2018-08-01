@@ -2,7 +2,7 @@ Expocon := module()
 
 option package;
 
-export Generator, Word, grade, hom, wcoeff, 
+export Generator, Word, grade, hom, homv, wcoeff, 
        lyndon_words, lyndon_basis, rightnormed_basis,
        rhs_legendre;
 
@@ -66,10 +66,54 @@ end proc;
     varphi[w](ex) 
 end proc;
 
+homv := proc (w::Word, ex::anything, v::list)
+    local i, v1, zero;
+    if type(ex, Generator) then 
+        return [seq(`if`(op(i, w)=ex, v[i+1], 0), i=1..nops(w)), 0]
+    elif type(ex, `+`) then 
+        return add(homv(w, op(i, ex), v), i=1..nops(ex))
+    elif type(ex, `*`) then
+        v1 := v;
+        zero = [0$nops(w)+1];
+        for i from nops(ex) to 1 by -1 do
+            v1 := homv(w, op(i, ex), v1);           
+            if v1=zero then
+                return zero 
+            end;
+        end do;     
+        return v1
+    elif type(ex, anything^integer) then
+        v1 := v;
+        zero = [0$nops(w)+1];
+        for i from 1 to op(2, ex) do
+            v1 := homv(w, op(1, ex), v1);            
+            if v1=zero then
+                return zero 
+            end;
+        end do;     
+        return v1
+    elif type(ex, function) and op(0, ex) = Physics[Commutator] then 
+        return homv(w, op(1,ex)*op(2,ex)-op(2,ex)*op(1,ex) ,v)
+    elif type(ex, exp(anything)) then 
+        v1 := v;
+        v2 := v;
+        zero = [0$nops(w)+1];
+        f := 1;
+        for i from 1 to nops(w) do
+            f := f*i;
+            v1 := homv(w, op(ex), v1);
+            if v1=zero then
+                return v2;
+            end;
+            v2 := v2 + v1/f;
+        end do;
+        return v2
+    end if; 
+    return [seq(ex*x, x=v)]
+end proc;
+
 wcoeff := proc (w::Word, ex::anything) 
-    local H; 
-    H := Matrix(hom(w, ex)); 
-    H[1, LinearAlgebra[Dimension](H)[2]] 
+    homv(w, ex, [`$`(0, nops(w)), 1])[1]
 end proc;
 
 
@@ -94,28 +138,32 @@ lyndon_transform := proc (w::(list(integer)))
     w1 
 end proc;
 
-genLW := proc(k::integer, n::integer, t::integer, p::integer, trafo::boolean)
+genLW := proc(k::integer, n::integer, t::integer, p::integer, trafo::boolean, mg::{integer, infinity})
     global __a, __W;
-    local j;
+    local j, w;
     if t>n then
         if p=n then
             if trafo then
-                __W := [op(__W), lyndon_transform(__a[2..n+1])]
+                w := lyndon_transform(__a[2..n+1]);
+                if max(w)<mg then
+                    __W := [op(__W), w]
+                end if;
             else
                 __W := [op(__W), __a[2..n+1]]
             end if
         end if
     else
         __a[t+1] := __a[t-p+1];
-        genLW(k, n, t+1, p,  trafo);
+        genLW(k, n, t+1, p,  trafo, mg);
         for j from __a[t-p+1]+1 to k-1 do
             __a[t+1] := j;
-            genLW(k, n, t+1, t,  trafo)
+            genLW(k, n, t+1, t, trafo, mg)
         end do
     end if
 end proc;
 
-lyndon_words := proc(s::{integer, list(Generator), symbol}, q::{integer, list(integer)})
+lyndon_words := proc(s::{integer, list(Generator), symbol}, q::{integer, list(integer)},
+                     {max_generator_grade::{integer, infinity}:=infinity})
     local trafo, qq, n, k, w, x;
     global __a, __W;
 
@@ -137,7 +185,7 @@ lyndon_words := proc(s::{integer, list(Generator), symbol}, q::{integer, list(in
     __W := [];
     for n in qq do
         __a := [0$n+1];
-        genLW( `if`(trafo, 2, k), n, 1, 1, trafo)
+        genLW( `if`(trafo, 2, k), n, 1, 1, trafo, max_generator_grade)
     end do;
 
     if type(s, integer) then
@@ -170,12 +218,14 @@ lyndon_bracket := proc(l::integer, r::integer, trafo::boolean)
     end if
 end proc;
 
-genLB := proc (k::integer, n::integer, t::integer, trafo::boolean)
+genLB := proc (k::integer, n::integer, t::integer, trafo::boolean, mg::{integer, infinity})
     global __p, __a, __split, __B;
     local q, i, j;
     if t>n then
         if n=__p[1] then
-            __B := [op(__B), lyndon_bracket(1, n, trafo)]
+            if not trafo or max(lyndon_transform(__a[2..n+1]))<mg then
+                __B := [op(__B), lyndon_bracket(1, n, trafo)]
+            end
         end if
     else
         q := __p;
@@ -196,7 +246,7 @@ genLB := proc (k::integer, n::integer, t::integer, trafo::boolean)
                     __split[i,t] := __split[i+1,t]
                 end if
             end do;
-            genLB(k, n, t+1, trafo);
+            genLB(k, n, t+1, trafo, mg);
             __p := q
         end do
     end if
@@ -211,7 +261,8 @@ convert_commutator := proc(s::{list(Generator), symbol}, c)
     end if
 end proc;
 
-lyndon_basis := proc(s::{integer, list(Generator), symbol}, q::{integer, list(integer)})
+lyndon_basis := proc(s::{integer, list(Generator), symbol}, q::{integer, list(integer)},
+                     {max_generator_grade::{integer, infinity}:=infinity})
     local trafo, qq, n, k, b;
     global __a, __p, __split, __B;
 
@@ -236,7 +287,7 @@ lyndon_basis := proc(s::{integer, list(Generator), symbol}, q::{integer, list(in
         __a := [0$n+1];
         __p := [1$n];
         __split := array(1 .. n, 1 .. n, [[0$n]$n]);
-        genLB( `if`(trafo, 2, k), n, 1, trafo)
+        genLB( `if`(trafo, 2, k), n, 1, trafo, max_generator_grade)
     end do;
 
     if type(s, integer) then
@@ -384,7 +435,8 @@ rightnormed_word2commutator := proc(w::list(integer))
     b
 end proc;
 
-rightnormed_basis := proc(s::{integer, list(Generator), symbol}, q::{integer, list(integer)})
+rightnormed_basis := proc(s::{integer, list(Generator), symbol}, q::{integer, list(integer)},
+                          {max_generator_grade::{integer, infinity}:=infinity})
     local k, B, w;
 
     if type(s, list(Generator)) then
@@ -396,7 +448,7 @@ rightnormed_basis := proc(s::{integer, list(Generator), symbol}, q::{integer, li
     end if;
 
     B := [seq(rightnormed_word2commutator(
-              lyndon2rightnormed(w)), w=lyndon_words(k, q))];
+              lyndon2rightnormed(w)), w=lyndon_words(k, q, max_generator_grade))];
 
     if type(s, integer) then
        return B
