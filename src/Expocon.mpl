@@ -2,13 +2,15 @@ Expocon := module()
 
 option package;
 
-export Generator, Word, grade, hom, homv, wcoeff, 
+export Generator, Word, SimpleComuutator, grade, hom, homv, wcoeff, 
        lyndon_words, lyndon_basis, rightnormed_basis,
+       transformation_matrix,
        rhs_legendre;
 
-global `type/Generator`, `type/Word`, `print/Word`, `print/hom`;
+global `type/Generator`, `type/Word`, `print/Word`, `print/hom`,
+       `type/SimpleCommutator`, `print/SimpleCommutator`;
 
-local grade_gen, grade_word, lyndon_transform, genLW,
+local lyndon_transform, genLW,
       lyndon_bracket, genLB, convert_commutator,
       lexless, sort_lexorder, invperm, reverse, analyze_lyndon_word,
       lyndon2rightnormed, rightnormed_word2commutator;
@@ -27,21 +29,26 @@ end proc;
     mul(args[i], i = 1 .. nargs) 
 end proc;
 
-grade_gen := proc (g::Generator) 
-    if type(g, indexed) then
-        return op(g)
+`type/SimpleCommutator` := proc (c) 
+    op(0, c) = SimpleCommutator and nops(c) = 2 
+end proc;
+
+`print/SimpleCommutator` := proc () 
+    [args[1], args[2]] 
+end proc;
+
+grade := proc(x::{Generator, Word})
+    local i;
+    if type(x, Generator) then
+        if type(x, indexed) then
+            return op(x)
+        else
+            return 1
+        end
     else
-        return 1
-    end
+       return add(grade(op(i, x)), i = 1 .. nops(x))
+    end if
 end proc;
-
-grade_word := proc (w::Word) 
-    local i; 
-    option overload; 
-    add(grade_gen(op(i, w)), i = 1 .. nops(w)) 
-end proc;
-
-grade := overload([grade_gen, grade_word]);
 
 hom := proc (w::Word, ex::anything) 
     local i; 
@@ -54,7 +61,8 @@ hom := proc (w::Word, ex::anything)
         return evalm(`&*`(seq(hom(w, op(i, ex)), i = 1 .. nops(ex)))) 
     elif type(ex, `^`) then 
         return evalm(hom(w, op(1, ex))^op(2, ex)) 
-    elif type(ex, function) and op(0, ex) = Physics[Commutator] then 
+    #elif type(ex, function) and op(0, ex) = Physics[Commutator] then 
+    elif type(ex, SimpleCommutator) then
         return evalm(`&*`(hom(w, op(1, ex)), hom(w, op(2, ex)))-`&*`(hom(w, op(2, ex)), hom(w, op(1, ex)))) 
     elif type(ex, function) and op(0, ex) = exp then 
         return LinearAlgebra[MatrixExponential](hom(w, op(ex))) 
@@ -92,8 +100,9 @@ homv := proc (w::Word, ex::anything, v::list)
             end;
         end do;     
         return v1
-    elif type(ex, function) and op(0, ex) = Physics[Commutator] then 
-        return homv(w, op(1,ex)*op(2,ex)-op(2,ex)*op(1,ex) ,v)
+    #elif type(ex, function) and op(0, ex) = Physics[Commutator] then 
+    elif type(ex, SimpleCommutator) then
+        return homv(w, op(1, ex), homv(w, op(2, ex), v)) - homv(w, op(2, ex), homv(w, op(1, ex), v)) 
     elif type(ex, exp(anything)) then 
         v1 := v;
         v2 := v;
@@ -256,8 +265,10 @@ convert_commutator := proc(s::{list(Generator), symbol}, c)
     if type(c,integer) then
         return s[c+1]
     else
-        return Physics[Commutator](convert_commutator(s, op(1, c)), 
-                                   convert_commutator(s, op(2, c)))
+        #return Physics[Commutator](convert_commutator(s, op(1, c)), 
+        #                           convert_commutator(s, op(2, c)))
+        return SimpleCommutator(convert_commutator(s, op(1, c)), 
+                                convert_commutator(s, op(2, c)))
     end if
 end proc;
 
@@ -457,8 +468,57 @@ rightnormed_basis := proc(s::{integer, list(Generator), symbol}, q::{integer, li
     end if
 end proc;
 
+########################################
+transformation_matrix := proc(s::{integer, list(Generator), symbol}, q::{integer, list(integer)},
+                          {max_generator_grade::{integer, infinity}:=infinity,
+                           rightnormed::boolean:=false})
+    local homv1, wcoeff1, k, W, B, blocks, i, j, c, x, T, b;
 
-  
+    homv1 := proc (w::(list(integer)), ex::{integer, list}, v::(list(integer))) 
+        if type(ex, integer) then 
+            return [seq(`if`(op(i, w) = ex, v[i+1], 0), i = 1 .. nops(w)), 0] 
+        else 
+            return homv1(w, op(1, ex), homv1(w, op(2, ex), v))-homv1(w, op(2, ex), homv1(w, op(1, ex), v)) 
+        end if 
+    end proc; 
+
+    wcoeff1 := proc (w::(list(integer)), ex::{integer, list}) 
+        homv1(w, ex, [`$`(0, nops(w)), 1])[1] 
+    end proc;
+
+    if type(s, list(Generator)) then
+        k := nops(s)
+    elif type(s, symbol) then
+        k := 1
+    else
+        k := s
+    end if;
+
+    W := lyndon_words(k, q, max_generator_grade);
+    if rightnormed then
+        B := rightnormed_basis(k, q, max_generator_grade);
+    else
+        B := lyndon_basis(k, q, max_generator_grade);
+    end if;
+
+    blocks := table([seq(x = [], x = op({seq(sort(w), w = W)}))]); 
+    for i to nops(W) do 
+        c := sort(W[i]); 
+        blocks[c] := [op(blocks[c]), i] 
+    end do; 
+    blocks := [entries(blocks, 'nolist')];
+
+    T := array([`$`([`$`(0, nops(W))], nops(W))]); 
+    for b in blocks do 
+        for i to nops(b) do 
+            for j to `if`(rightnormed, nops(b), i) do 
+                T[b[i], b[j]] := wcoeff1(W[b[i]], B[b[j]]) 
+            end do
+        end do
+    end do;
+    
+    T
+end proc;
 
 
 ########################################
