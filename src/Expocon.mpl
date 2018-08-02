@@ -224,8 +224,12 @@ lyndon_coeffs := proc(ex::anything, s::{list(Generator), symbol}, q::{integer, l
 
     qq := sort([op({op(qq)})]);
     p := qq[-1];
-    qq := qq[1..-2];
+    if nops(qq)= 1 then
+        Wp := lyndon_words(s, p, ':-max_generator_grade'=max_generator_grade);
+        return [seq(homv(w, ex, [`$`(0, nops(w)), 1])[1], w=Wp)]
+    end if;
 
+    qq := qq[1..-2];
     W := lyndon_words(k, qq, ':-max_generator_grade'=max_generator_grade);
     Wp := lyndon_words(s, p, ':-max_generator_grade'=max_generator_grade);
     # now global variable __W contains 'pure' Wp
