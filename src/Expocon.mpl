@@ -3,7 +3,7 @@ Expocon := module()
 option package;
 
 export Generator, Word, SimpleComuutator, grade, hom, homv, wcoeff, 
-       lyndon_words, lyndon_basis, rightnormed_basis,
+       lyndon_words, lyndon_coeffs, lyndon_basis, rightnormed_basis,
        transformation_matrix,
        rhs_legendre;
 
@@ -131,6 +131,9 @@ end proc;
 
 lyndon_transform := proc (w::(list(integer))) 
     local w1, c, x; 
+    if w=[0] then 
+        return NULL;
+    end if;
     w1 := []; 
     c := 0; 
     for x in w[2 .. -1] do 
@@ -186,12 +189,12 @@ lyndon_words := proc(s::{integer, list(Generator), symbol}, q::{integer, list(in
         qq := [q]
     else
         qq := q
-    end;
+    end if;
 
     trafo := k<2;
     __W := [];
     for n in qq do
-        __a := [0$n+1];
+        __a := [0$n+1];        
         genLW( `if`(trafo, 2, k), n, 1, 1, trafo, max_generator_grade)
     end do;
 
@@ -200,6 +203,44 @@ lyndon_words := proc(s::{integer, list(Generator), symbol}, q::{integer, list(in
     else
         return [seq(Word(seq(s[x+1], x=w)), w=__W)]
     end if
+end proc;
+
+lyndon_coeffs := proc(ex::anything, s::{list(Generator), symbol}, q::{integer, list(integer)},
+                     {max_generator_grade::{integer, infinity}:=infinity})
+    global  __W;
+    local k, qq, p, W, Wp, T, cc, j, w;
+
+    if type(s, list(Generator)) then
+        k := nops(s)
+    else
+        k := 1
+    end;
+
+    if type(q, integer) then
+        qq := [q]
+    else
+        qq := q
+    end if;
+
+    qq := sort([op({op(qq)})]);
+    p := qq[-1];
+    qq := qq[1..-2];
+
+    W := lyndon_words(k, qq, ':-max_generator_grade'=max_generator_grade);
+    Wp := lyndon_words(s, p, ':-max_generator_grade'=max_generator_grade);
+    # now global variable __W contains 'pure' Wp
+    T := table([seq(__W[j]=j, j=1..nops(__W))]);
+    cc := [seq(homv(w, ex, [`$`(0, nops(w)), 1]), w=Wp)];
+    if W[1] = [0] then
+        c1 := wcoeff(Word(s[1]), ex);
+        W := W[2..-1];
+    else
+        c1 := NULL;
+    end if;
+
+    [c1, 
+     seq(cc[T[[0$p-`if`(k=1,add(w),0)-nops(w),op(w)]]][p-`if`(k=1,add(w),0)-nops(w)+1], w=W),
+     seq(cc[j][1], j=1..nops(Wp))]
 end proc;
 
 
@@ -457,7 +498,7 @@ rightnormed_basis := proc(s::{integer, list(Generator), symbol}, q::{integer, li
     end if;
 
     B := [seq(rightnormed_word2commutator(
-              lyndon2rightnormed(w)), w=lyndon_words(k, q, max_generator_grade))];
+              lyndon2rightnormed(w)), w=lyndon_words(k, q, ':-max_generator_grade'=max_generator_grade))];
 
     if type(s, integer) then
        return B
@@ -492,11 +533,11 @@ transformation_matrix := proc(s::{integer, list(Generator), symbol}, q::{integer
         k := s
     end if;
 
-    W := lyndon_words(k, q, max_generator_grade);
+    W := lyndon_words(k, q, ':-max_generator_grade'=max_generator_grade);
     if rightnormed then
-        B := rightnormed_basis(k, q, max_generator_grade);
+        B := rightnormed_basis(k, q, ':-max_generator_grade'=max_generator_grade);
     else
-        B := lyndon_basis(k, q, max_generator_grade);
+        B := lyndon_basis(k, q, ':-max_generator_grade'=max_generator_grade);
     end if;
 
     blocks := table([seq(x = [], x = op({seq(sort(w), w = W)}))]); 
