@@ -4,10 +4,10 @@ option package;
 
 export Generator, Word, SimpleComuutator, grade, hom, homv, wcoeff, 
        lyndon_words, lyndon_coeffs, lyndon_basis, rightnormed_basis,
-       transformation_matrix,
+       lyndon_transformation_matrix,
        rhs_legendre;
 
-global `type/Generator`, `type/Word`, `print/Word`, `print/hom`,
+global `type/Generator`, `type/Word`, 
        `type/SimpleCommutator`, `print/SimpleCommutator`;
 
 local lyndon_transform, genLW,
@@ -19,15 +19,7 @@ local lyndon_transform, genLW,
     type(g, name) and type(g, noncommutative)
 end proc;
 
-`type/Word` := proc (w) 
-    local i; 
-    op(0, w) = Word and `and`(seq(type(op(i, w), Generator), i = 1 .. nops(w))) 
-end proc;
-
-`print/Word` := proc () 
-    local i; 
-    mul(args[i], i = 1 .. nargs) 
-end proc;
+`type/Word` := list(Generator);
 
 `type/SimpleCommutator` := proc (c) 
     op(0, c) = SimpleCommutator and nops(c) = 2 
@@ -69,9 +61,6 @@ hom := proc (w::Word, ex::anything)
     return ex*LinearAlgebra[IdentityMatrix](nops(w)+1) 
 end proc;
 
-`print/hom` := proc (w, ex) 
-    varphi[w](ex) 
-end proc;
 
 homv := proc (w, ex, v) # no type checks here due to performance reasons
     local i, v1, v2, f, zero;
@@ -201,7 +190,7 @@ lyndon_words := proc(s::{integer, list(Generator), symbol}, q::{integer, list(in
     if type(s, integer) then
        return __W
     else
-        return [seq(Word(seq(s[x+1], x=w)), w=__W)]
+        return [seq([seq(s[x+1], x=w)], w=__W)]
     end if
 end proc;
 
@@ -237,7 +226,7 @@ lyndon_coeffs := proc(ex::anything, s::{list(Generator), symbol}, q::{integer, l
     T := table([seq(__W[j]=j, j=1..nops(__W))]);
     cc := [seq(homv(w, ex, [`$`(0, nops(w)), 1]), w=Wp)];
     if W[1] = [0] then
-        c1 := wcoeff(Word(s[1]), ex);
+        c1 := wcoeff([s[1]], ex);
         if exact<>`none` then
             r1 := op(exact([0]));
         end;
@@ -523,7 +512,7 @@ rightnormed_basis := proc(s::{integer, list(Generator), symbol}, q::{integer, li
 end proc;
 
 ########################################
-transformation_matrix := proc(s::{integer, list(Generator), symbol}, q::{integer, list(integer)},
+lyndon_transformation_matrix := proc(s::{integer, list(Generator), symbol}, q::{integer, list(integer)},
                           {max_generator_grade::{integer, infinity}:=infinity,
                            rightnormed::boolean:=false})
     local homv1, wcoeff1, k, W, B, blocks, i, j, c, x, T, b;
