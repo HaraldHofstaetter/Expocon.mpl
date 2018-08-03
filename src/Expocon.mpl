@@ -206,7 +206,8 @@ lyndon_words := proc(s::{integer, list(Generator), symbol}, q::{integer, list(in
 end proc;
 
 lyndon_coeffs := proc(ex::anything, s::{list(Generator), symbol}, q::{integer, list(integer)},
-                     {max_generator_grade::{integer, infinity}:=infinity})
+                     {max_generator_grade::{integer, infinity}:=infinity,
+                      exact::symbol:=`none`})
     global  __W;
     local k, qq, p, W, Wp, T, cc, j, w;
 
@@ -237,14 +238,24 @@ lyndon_coeffs := proc(ex::anything, s::{list(Generator), symbol}, q::{integer, l
     cc := [seq(homv(w, ex, [`$`(0, nops(w)), 1]), w=Wp)];
     if W[1] = [0] then
         c1 := wcoeff(Word(s[1]), ex);
+        if exact<>`none` then
+            r1 := op(exact([0]));
+        end;
         W := W[2..-1];
     else
         c1 := NULL;
+        r1 := NULL;
     end if;
 
-    [c1, 
+    r:=[c1, 
      seq(cc[T[[0$p-`if`(k=1,add(w),0)-nops(w),op(w)]]][p-`if`(k=1,add(w),0)-nops(w)+1], w=W),
-     seq(cc[j][1], j=1..nops(Wp))]
+     seq(cc[j][1], j=1..nops(Wp))];
+
+    if exact<>`none` then
+       rr := [r1, op(exact(W)), op(exact(__W))];
+       r := r - rr;
+    end if;
+    r
 end proc;
 
 
@@ -565,9 +576,13 @@ end proc;
 
 
 ########################################
-rhs_legendre := proc(W::list(Word))
-    local W1, p, w, L, l, s, c, k, T, v;
-    W1 := [seq(map(grade, [op(w)]), w in W)];
+rhs_legendre := proc(W::list)
+    local W1, x, p, w, L, l, s, c, k, T, v;
+    if type(W[1], Word) then
+        W1 := [seq(map(grade, [op(w)]), w in W)];
+    else
+        W1 := [seq([seq(x+1, x in w)], w in W)];
+    end if;
     p := max(seq(add(w), w in W1));
     L := array([seq([seq((-1)^(m+n)*binomial(n, m)*binomial(m+n, m), n = 0 .. p-1)], m = 0 .. p-1)]);
     c := [];
