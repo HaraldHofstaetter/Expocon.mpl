@@ -2,7 +2,7 @@ Expocon := module()
 
 option package;
 
-export Generator, Word, SimpleComuutator, grade, hom, homv, wcoeff, 
+export Generator, Word, SimpleCommutator, grade, hom, homv, wcoeff, 
        lyndon_words, lyndon_coeffs, lyndon_basis, rightnormed_basis,
        lyndon_transformation_matrix,
        rhs_legendre;
@@ -30,7 +30,7 @@ end proc;
 end proc;
 
 grade := proc(x::{Generator, Word})
-    local i;
+    local g;
     if type(x, Generator) then
         if type(x, indexed) then
             return op(x)
@@ -38,7 +38,7 @@ grade := proc(x::{Generator, Word})
             return 1
         end
     else
-       return add(grade(op(i, x)), i = 1 .. nops(x))
+       return add(grade(g), g in x)
     end if
 end proc;
 
