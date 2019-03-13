@@ -40,7 +40,7 @@ save sols12,"cf8_sols12.m":
 #read "cf8_sols12.m":
 
 FF := seq(evalf(allvalues(sol)), sol in sols12):
-save FF, "cf_FF.m":
+save FF, "cf8_FF.m":
 #read "cf8_FF.m":
 
 k := 0:
