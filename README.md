@@ -2,9 +2,14 @@
 
 A Maple package for the generation of order conditions for the construction of exponential integrators.
 
->[W. Auzinger](http://www.asc.tuwien.ac.at/~winfried), [H. Hofstätter](http://www.harald-hofstaetter.at), [O. Koch](http://othmar-koch.org), [An Algorithm for Computing Coefficients of Words in Expressions Involving Exponentials and its Application to the Construction of Exponential Integrators](), submitted.
+>[1] [W. Auzinger](http://www.asc.tuwien.ac.at/~winfried), [H. Hofstätter](http://www.harald-hofstaetter.at), [O. Koch](http://othmar-koch.org), [An Algorithm for Computing Coefficients of Words in Expressions Involving Exponentials and its Application to the Construction of Exponential Integrators](), submitted.
 
->[H. Hofstätter](http://www.harald-hofstaetter.at), [Order conditions for exponential integrators](https://arxiv.org/pdf/1902.11256), submitted. 
+>[2] [H. Hofstätter](http://www.harald-hofstaetter.at), [Order conditions for exponential integrators](https://arxiv.org/pdf/1902.11256), submitted. 
+
+
+[`phiv`](https://github.com/HaraldHofstaetter/Expocon.mpl/blob/master/src/Expocon.mpl#L65)
+
+[`wcoeff`](https://github.com/HaraldHofstaetter/Expocon.mpl/blob/master/src/Expocon.mpl#L111)
 
 ```maple
 with(Physics):
