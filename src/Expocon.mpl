@@ -2,7 +2,7 @@ Expocon := module()
 
 option package;
 
-export Generator, Word, SimpleCommutator, grade, hom, homv, wcoeff, 
+export Generator, Word, SimpleCommutator, grade, phi, phiv, wcoeff, 
        lyndon_words, lyndon_coeffs, lyndon_basis, rightnormed_basis,
        lyndon_transformation_matrix,
        rhs_legendre;
@@ -42,37 +42,37 @@ grade := proc(x::{Generator, Word})
     end if
 end proc;
 
-hom := proc (w::Word, ex::anything) 
+phi := proc (w::Word, ex::anything) 
     local i; 
     if type(ex,name) and type(ex, noncommutative) then 
         return LinearAlgebra[Transpose](LinearAlgebra[BandMatrix]([[seq(subs([false = 0, true = 1], 
             evalb(op(i, w) = ex)), i = 1 .. nops(w))]], 1, nops(w)+1, nops(w)+1)) 
     elif type(ex, `+`) then 
-        return evalm(add(hom(w, op(i, ex)), i = 1 .. nops(ex))) 
+        return evalm(add(phi(w, op(i, ex)), i = 1 .. nops(ex))) 
     elif type(ex, `*`) then 
-        return evalm(`&*`(seq(hom(w, op(i, ex)), i = 1 .. nops(ex)))) 
+        return evalm(`&*`(seq(phi(w, op(i, ex)), i = 1 .. nops(ex)))) 
     elif type(ex, `^`) then 
-        return evalm(hom(w, op(1, ex))^op(2, ex)) 
+        return evalm(phi(w, op(1, ex))^op(2, ex)) 
     elif type(ex, SimpleCommutator) or (type(ex, function) and op(0, ex) = Physics[Commutator]) then 
-        return evalm(`&*`(hom(w, op(1, ex)), hom(w, op(2, ex)))-`&*`(hom(w, op(2, ex)), hom(w, op(1, ex)))) 
+        return evalm(`&*`(phi(w, op(1, ex)), phi(w, op(2, ex)))-`&*`(phi(w, op(2, ex)), phi(w, op(1, ex)))) 
     elif type(ex, function) and op(0, ex) = exp then 
-        return LinearAlgebra[MatrixExponential](hom(w, op(ex))) 
+        return LinearAlgebra[MatrixExponential](phi(w, op(ex))) 
     end if; 
     return ex*LinearAlgebra[IdentityMatrix](nops(w)+1) 
 end proc;
 
 
-homv := proc (w, ex, v) # no type checks here due to performance reasons
+phiv := proc (w, ex, v) # no type checks here due to performance reasons
     local i, v1, v2, f, zero;
     if type(ex,name) and type(ex, noncommutative) then 
         return [seq(`if`(op(i, w)=ex, v[i+1], 0), i=1..nops(w)), 0]
     elif type(ex, `+`) then 
-        return add(homv(w, op(i, ex), v), i=1..nops(ex))
+        return add(phiv(w, op(i, ex), v), i=1..nops(ex))
     elif type(ex, `*`) then
         v1 := v;
-        zero = [0$nops(w)+1];
+        zero := [0$nops(w)+1];
         for i from nops(ex) to 1 by -1 do
-            v1 := homv(w, op(i, ex), v1);           
+            v1 := phiv(w, op(i, ex), v1);           
             if v1=zero then
                 return zero 
             end;
@@ -80,24 +80,24 @@ homv := proc (w, ex, v) # no type checks here due to performance reasons
         return v1
     elif type(ex, anything^integer) then
         v1 := v;
-        zero = [0$nops(w)+1];
+        zero := [0$nops(w)+1];
         for i from 1 to op(2, ex) do
-            v1 := homv(w, op(1, ex), v1);            
+            v1 := phiv(w, op(1, ex), v1);            
             if v1=zero then
                 return zero 
             end;
         end do;     
         return v1
     elif type(ex, SimpleCommutator) or (type(ex, function) and op(0, ex) = Physics[Commutator]) then 
-        return homv(w, op(1, ex), homv(w, op(2, ex), v)) - homv(w, op(2, ex), homv(w, op(1, ex), v)) 
+        return phiv(w, op(1, ex), phiv(w, op(2, ex), v)) - phiv(w, op(2, ex), phiv(w, op(1, ex), v)) 
     elif type(ex, exp(anything)) then 
         v1 := v;
         v2 := v;
-        zero = [0$nops(w)+1];
+        zero := [0$nops(w)+1];
         f := 1;
         for i from 1 to nops(w) do
             f := f*i;
-            v1 := homv(w, op(ex), v1);
+            v1 := phiv(w, op(ex), v1);
             if v1=zero then
                 return v2;
             end;
@@ -109,7 +109,7 @@ homv := proc (w, ex, v) # no type checks here due to performance reasons
 end proc;
 
 wcoeff := proc (w::Word, ex::anything) 
-    homv(w, ex, [`$`(0, nops(w)), 1])[1]
+    phiv(w, ex, [`$`(0, nops(w)), 1])[1]
 end proc;
 
 
@@ -216,7 +216,7 @@ lyndon_coeffs := proc(ex::anything, s::{list(Generator), symbol}, q::{integer, l
     p := qq[-1];
     if nops(qq)= 1 then
         Wp := lyndon_words(s, p, ':-max_generator_grade'=max_generator_grade);
-        return [seq(homv(w, ex, [`$`(0, nops(w)), 1])[1], w=Wp)]
+        return [seq(phiv(w, ex, [`$`(0, nops(w)), 1])[1], w=Wp)]
     end if;
 
     qq := qq[1..-2];
@@ -224,7 +224,7 @@ lyndon_coeffs := proc(ex::anything, s::{list(Generator), symbol}, q::{integer, l
     Wp := lyndon_words(s, p, ':-max_generator_grade'=max_generator_grade);
     # now global variable __W contains 'pure' Wp
     T := table([seq(__W[j]=j, j=1..nops(__W))]);
-    cc := [seq(homv(w, ex, [`$`(0, nops(w)), 1]), w=Wp)];
+    cc := [seq(phiv(w, ex, [`$`(0, nops(w)), 1]), w=Wp)];
     if W[1] = [0] then
         c1 := wcoeff([s[1]], ex);
         if exact<>`none` then
@@ -515,18 +515,18 @@ end proc;
 lyndon_transformation_matrix := proc(s::{integer, list(Generator), symbol}, q::{integer, list(integer)},
                           {max_generator_grade::{integer, infinity}:=infinity,
                            rightnormed::boolean:=false})
-    local homv1, wcoeff1, k, W, B, blocks, i, j, c, x, T, b;
+    local phiv1, wcoeff1, k, W, B, blocks, i, j, c, x, T, b;
 
-    homv1 := proc (w::(list(integer)), ex::{integer, list}, v::(list(integer))) 
+    phiv1 := proc (w::(list(integer)), ex::{integer, list}, v::(list(integer))) 
         if type(ex, integer) then 
             return [seq(`if`(op(i, w) = ex, v[i+1], 0), i = 1 .. nops(w)), 0] 
         else 
-            return homv1(w, op(1, ex), homv1(w, op(2, ex), v))-homv1(w, op(2, ex), homv1(w, op(1, ex), v)) 
+            return phiv1(w, op(1, ex), phiv1(w, op(2, ex), v))-phiv1(w, op(2, ex), phiv1(w, op(1, ex), v)) 
         end if 
     end proc; 
 
     wcoeff1 := proc (w::(list(integer)), ex::{integer, list}) 
-        homv1(w, ex, [`$`(0, nops(w)), 1])[1] 
+        phiv1(w, ex, [`$`(0, nops(w)), 1])[1] 
     end proc;
 
     if type(s, list(Generator)) then
