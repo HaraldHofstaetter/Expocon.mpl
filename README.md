@@ -2,14 +2,20 @@
 
 A Maple package for the generation of order conditions for the construction of exponential integrators.
 
+Expocon.mpl was presented at the [CASC 2019](http://www.casc.cs.uni-bonn.de/2019/) workshop
+(=>[Slides of the Talk](http://www.harald-hofstaetter.at/Math/Computing_coefficients_of_words.pdf)),
+see also
+
 >[1] [H. Hofstätter](http://www.harald-hofstaetter.at), [W. Auzinger](http://www.asc.tuwien.ac.at/~winfried), [O. Koch](http://othmar-koch.org), [An Algorithm for Computing Coefficients of Words in Expressions Involving Exponentials and its Application to the Construction of Exponential Integrators](), [Proceedings of CASC 2019](http://www.casc.cs.uni-bonn.de/2019/), [Lecture Notes in Computer Science 11661, pp. 197-214](https://doi.org/10.1007/978-3-030-26831-2_14).
 
 >[2] [H. Hofstätter](http://www.harald-hofstaetter.at), [Order conditions for exponential integrators](https://arxiv.org/pdf/1902.11256).  
 
-
-[`phiv`](https://github.com/HaraldHofstaetter/Expocon.mpl/blob/master/src/Expocon.mpl#L65)
-
+It provides the Maple function
 [`wcoeff`](https://github.com/HaraldHofstaetter/Expocon.mpl/blob/master/src/Expocon.mpl#L111)
+for computing coefficients of words in expressions involving exponentials.
+
+
+## Example
 
 ```maple
 with(Physics):
