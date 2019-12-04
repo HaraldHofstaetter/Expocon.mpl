@@ -6,7 +6,7 @@ Expocon.mpl was presented at the [CASC 2019](http://www.casc.cs.uni-bonn.de/2019
 (=>[Slides of the Talk](http://www.harald-hofstaetter.at/Math/Computing_coefficients_of_words.pdf)),
 see also
 
->[1] [H. Hofstätter](http://www.harald-hofstaetter.at), [W. Auzinger](http://www.asc.tuwien.ac.at/~winfried), [O. Koch](http://othmar-koch.org), [An Algorithm for Computing Coefficients of Words in Expressions Involving Exponentials and its Application to the Construction of Exponential Integrators](), [Proceedings of CASC 2019](http://www.casc.cs.uni-bonn.de/2019/), [Lecture Notes in Computer Science 11661, pp. 197-214](https://doi.org/10.1007/978-3-030-26831-2_14).
+>[1] [H. Hofstätter](http://www.harald-hofstaetter.at), [W. Auzinger](http://www.asc.tuwien.ac.at/~winfried), [O. Koch](http://othmar-koch.org), [An Algorithm for Computing Coefficients of Words in Expressions Involving Exponentials and its Application to the Construction of Exponential Integrators](https://arxiv.org/pdf/1912.01399), [Proceedings of CASC 2019](http://www.casc.cs.uni-bonn.de/2019/), [Lecture Notes in Computer Science 11661, pp. 197-214](https://doi.org/10.1007/978-3-030-26831-2_14).
 
 >[2] [H. Hofstätter](http://www.harald-hofstaetter.at), [Order conditions for exponential integrators](https://arxiv.org/pdf/1902.11256).  
 
